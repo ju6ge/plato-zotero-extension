@@ -1,0 +1,15 @@
+[package]
+name = "plato-zotero-extension"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.52"
+chrono = "0.4.19"
+serde = "1.0.144"
+serde_json = "1.0.85"
+serde_derive = "1.0.144"
+signal-hook = "0.3.13"
+zotero = { git = "https://github.com/ju6ge/zotero" }
