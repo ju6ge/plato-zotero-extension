@@ -1,5 +1,4 @@
-use serde_derive::{Serialize, Deserialize};
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 use zotero::data_structure::ToJson;
 
 #[derive(Serialize, Deserialize, Debug)]

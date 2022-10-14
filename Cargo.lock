@@ -608,9 +608,7 @@ dependencies = [
  "anyhow",
  "chrono",
  "serde",
- "serde_derive",
  "serde_json",
- "serde_path_to_error",
  "signal-hook",
  "zotero",
 ]
@@ -732,6 +730,9 @@ name = "serde"
 version = "1.0.144"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0f747710de3dcd43b88c9168773254e809d8ddbdf9653b84e2554ab219f17860"
+dependencies = [
+ "serde_derive",
+]
 
 [[package]]
 name = "serde_derive"
@@ -752,15 +753,6 @@ checksum = "e55a28e3aaef9d5ce0506d0a14dbba8054ddc7e499ef522dd8b26859ec9d4a44"
 dependencies = [
  "itoa",
  "ryu",
- "serde",
-]
-
-[[package]]
-name = "serde_path_to_error"
-version = "0.1.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "184c643044780f7ceb59104cef98a5a6f12cb2288a7bc701ab93a362b49fd47d"
-dependencies = [
  "serde",
 ]
 
@@ -1159,12 +1151,11 @@ dependencies = [
 [[package]]
 name = "zotero"
 version = "0.0.2"
-source = "git+https://github.com/ju6ge/zotero#08c8726a5020e8ae32bf629ce16c7a6b8e9562a7"
+source = "git+https://github.com/ju6ge/zotero#1b789994de5feb793e2f6ca12c962f3046ccc368"
 dependencies = [
  "derive_builder",
  "reqwest",
  "serde",
- "serde_derive",
  "serde_json",
  "url",
 ]
