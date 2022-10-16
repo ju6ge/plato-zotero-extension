@@ -1151,11 +1151,19 @@ dependencies = [
 [[package]]
 name = "zotero"
 version = "0.0.2"
-source = "git+https://github.com/ju6ge/zotero#1b789994de5feb793e2f6ca12c962f3046ccc368"
 dependencies = [
  "derive_builder",
  "reqwest",
  "serde",
  "serde_json",
  "url",
+ "zotero_derive",
+]
+
+[[package]]
+name = "zotero_derive"
+version = "0.0.3"
+dependencies = [
+ "quote",
+ "syn",
 ]

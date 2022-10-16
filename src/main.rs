@@ -1,3 +1,4 @@
+use zotero::data_structure::item::Item;
 use anyhow::{Error, Context, format_err};
 use chrono;
 use serde_json::{json, Value as JsonValue};
@@ -11,7 +12,9 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use zotero::{ZoteroInit, Get};
 use zotero::data_structure::ToJson;
+use zotero::data_structure::shared_fields::Tagable;
 use zotero::data_structure::collection::{Collection};
+use std::ops::Deref;
 
 mod plato_events;
 
@@ -38,8 +41,11 @@ fn main() -> Result<(), Error> {
 
 	let zapi = ZoteroInit::set_user("8071408", "WhUroLO0NLtRY2BEkEVDP66t");
 
+	//let mut filter_items = Vec::new();
 	for item in zapi.get_items(None).expect("Error retrieving items") {
-		println!("{item:#?}");
+		if item.data.has_tag("plato-read".to_string()) {
+			println!("{item:?}");
+		}
 	}
     println!("{}", PlatoEvent::message(&"Zotero Collections loaded!").to_json());
 
