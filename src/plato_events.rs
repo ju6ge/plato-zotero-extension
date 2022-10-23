@@ -3,7 +3,7 @@ use zotero::data_structure::ToJson;
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "type")]
-pub enum PlatoEvent {
+pub enum PlatoMessage {
 	#[serde(rename="notify")]
 	Notification {
 		message: String
@@ -21,16 +21,12 @@ pub enum PlatoEvent {
 		sortBy: (String, bool)
 	},
 
-	#[serde(rename="searchresult")]
-	SearchResults {
-		result: String,
-	}
 }
 
-impl ToJson for PlatoEvent {}
+impl ToJson for PlatoMessage {}
 
-impl PlatoEvent {
-	pub fn message(msg: &dyn ToString) -> Self {
+impl PlatoMessage {
+	pub fn notify(msg: &dyn ToString) -> Self {
 		Self::Notification {
 			message: msg.to_string()
 		}
@@ -51,5 +47,14 @@ impl PlatoEvent {
 			query: query.to_string(),
 			sortBy: ( sorting.to_string(), reverse )
 		}
+	}
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(tag = "type")]
+pub enum PlatoResponse {
+	#[serde(rename="search")]
+	SearchResults {
+		results: Vec<String>,
 	}
 }
