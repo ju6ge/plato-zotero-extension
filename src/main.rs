@@ -3,7 +3,7 @@ use chrono;
 use serde::{Serialize, Deserialize};
 use serde_json::{json, Value as JsonValue};
 use std::io;
-use std::io::{Write, Read};
+use std::io::{Write, Read, Cursor};
 use std::env;
 use std::fs::{self, File};
 use std::path::Path;
@@ -19,6 +19,7 @@ use std::ops::Deref;
 use rustydav::client::Client;
 use rustydav::prelude::*;
 use toml;
+use zip::ZipArchive;
 
 mod plato_events;
 use plato_events::{PlatoMessage, PlatoResponse};
@@ -35,8 +36,15 @@ struct ZoteroSyncSettings {
 fn download_pdf(parent_key: &String, pdf_id: &Vec<AttachmentData>, client: &Client, url: &str) -> Option<String> {
 	for atch in pdf_id {
 		println!("{}", format!("{}/{}.zip", url, atch.key));
-		let resp = client.get(&format!("{}/{}.zip", url, atch.key));
-		println!("{resp:#?}");
+		match client.get(&format!("{}/{}.zip", url, atch.key)) {
+			Ok(resp) => {
+				let mut archive = ZipArchive::new(Cursor::new(resp.bytes().unwrap())).unwrap();
+				for i in 0..archive.len() {
+					println!("{}",archive.by_index(i).unwrap().name());
+				}
+			}
+			Err(err) => {}
+		}
 	}
 	None
 }
@@ -115,7 +123,7 @@ fn main() -> Result<(), Error> {
 					writeln!(logfile, "{}:\tError: {msg}", chrono::offset::Local::now());
 				}
 				Ok(response) => {
-					writeln!(logfile, "{}:\tError: {response:#?}", chrono::offset::Local::now());
+					writeln!(logfile, "{}:\t{response:#?}", chrono::offset::Local::now());
 					plato_resp = Some(response);
 				}
 			}
