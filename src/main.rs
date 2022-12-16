@@ -33,20 +33,35 @@ struct ZoteroSyncSettings {
 	webdav_password: String
 }
 
-fn download_pdf(parent_key: &String, pdf_id: &Vec<AttachmentData>, client: &Client, url: &str) -> Option<String> {
-	for atch in pdf_id {
-		println!("{}", format!("{}/{}.zip", url, atch.key));
-		match client.get(&format!("{}/{}.zip", url, atch.key)) {
-			Ok(resp) => {
-				let mut archive = ZipArchive::new(Cursor::new(resp.bytes().unwrap())).unwrap();
-				for i in 0..archive.len() {
-					println!("{}",archive.by_index(i).unwrap().name());
-				}
-			}
-			Err(err) => {}
-		}
-	}
-	None
+fn download_pdf(parent_item: &Item, pdf_id: &Vec<AttachmentData>, client: &Client, url: &str, save_path: &Path) -> Option<String> {
+    // Create the output folder if it doesn't already exist
+    let document_folder = save_path.join(&parent_item.key);
+    if !document_folder.exists() {
+        fs::create_dir(&document_folder).expect("Unable to create output folder");
+    }
+
+    for atch in pdf_id {
+        match client.get(&format!("{}/{}.zip", url, atch.key)) {
+            Ok(resp) => {
+                let mut archive = ZipArchive::new(Cursor::new(resp.bytes().unwrap())).unwrap();
+                for i in 0..archive.len() {
+                    let mut file = archive.by_index(i).unwrap();
+                    let outpath = document_folder.join(file.name());
+
+                    // Create the output file if it doesn't already exist
+                    let mut outfile = File::create(&outpath).unwrap();
+
+                    // Write the contents of the PDF file to the output file
+                    io::copy(&mut file, &mut outfile).expect("Unable to write to output file");
+					println!("{}", PlatoMessage::addDocument(&outpath, parent_item).to_json());
+                }
+            }
+            Err(err) => {
+                println!("{}", PlatoMessage::notify(&format!("Could not download Zotero Item {}!\n{}", atch.title, err)).to_json());
+            }
+        }
+    }
+    None
 }
 
 fn main() -> Result<(), Error> {
@@ -88,6 +103,7 @@ fn main() -> Result<(), Error> {
 	let zapi = ZoteroInit::set_user(&settings.zotero_id, &settings.zotero_key);
 
 	let items_to_read = zapi.get_items("tag=plato-read").expect("Error retrieving items");
+	let mut items_by_key = BTreeMap::new();
 	let mut pdf_attachments_children = BTreeMap::new();
 	for i in &items_to_read {
 		if i.meta.has_children() {
@@ -104,6 +120,7 @@ fn main() -> Result<(), Error> {
 				}
 			}).collect();
 			pdf_attachments_children.insert(i.key().to_string(), children);
+			items_by_key.insert(i.key().to_string(), i);
 		}
 	}
     println!("{}", PlatoMessage::notify(&"Zotero Items tagged for Reading loaded!").to_json());
@@ -130,7 +147,7 @@ fn main() -> Result<(), Error> {
 		}
 
 		for (parent_key, pdf_attachments) in &pdf_attachments_children {
-			download_pdf(parent_key, pdf_attachments, &webdav_client, &settings.webdav_url);
+			download_pdf(items_by_key[parent_key], pdf_attachments, &webdav_client, &settings.webdav_url, &save_path);
 		}
 
 	}
