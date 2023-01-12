@@ -13,6 +13,16 @@ pub struct PlatoFileInfo {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+pub struct PlatoDocumentInfo {
+	title: String,
+	author: String,
+	year: i32,
+	identifier: String,
+	added: String,
+	file: PlatoFileInfo
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "type")]
 pub enum PlatoMessage {
 	#[serde(rename="notify")]
@@ -34,12 +44,7 @@ pub enum PlatoMessage {
 
 	#[serde(rename="addDocument")]
 	AddDocument {
-		title: String,
-		author: String,
-		year: i32,
-		identifier: String,
-		added: String,
-		file: PlatoFileInfo,
+		info: PlatoDocumentInfo
 	}
 }
 
@@ -84,13 +89,16 @@ impl PlatoMessage {
 			size: size
 		};
 
+
 		Self::AddDocument {
-			title: document_info.title().to_string(),
-			author: document_info.author(),
-			year: document_info.date().year(),
-			identifier: Item::key(&document_info).to_string(),
-			added: chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string(),
-			file: file_info
+			info: PlatoDocumentInfo {
+				title: document_info.title().to_string(),
+				author: document_info.author(),
+				year: document_info.date().year(),
+				identifier: Item::key(&document_info).to_string(),
+				added: chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+				file: file_info
+			}
 		}
 	}
 }

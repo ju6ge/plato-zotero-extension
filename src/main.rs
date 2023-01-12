@@ -4,7 +4,7 @@ use serde::{Serialize, Deserialize};
 use serde_json::{json, Value as JsonValue};
 use std::io;
 use std::io::{Write, Read, Cursor};
-use std::env;
+use std::env::{self, args};
 use std::fs::{self, File};
 use std::path::Path;
 use std::collections::BTreeMap;
@@ -76,19 +76,23 @@ fn main() -> Result<(), Error> {
 		logfile = File::create(&logpath).expect("Error creating log file!");
 	}
 
+	writeln!(logfile, "{}:\t{args:?}", chrono::offset::Local::now());
+	writeln!(logfile, "{}:\t{}", chrono::offset::Local::now(), env::var("PWD").unwrap());
+
 	let mut settingsfile: File;
-	let settingsfilepath = Path::new("ZoteroSettings.toml");
+	let settingsfilepath = Path::new(&env::var("PWD").unwrap()).join("ZoteroSettings.toml");
 	if settingsfilepath.exists() {
 		settingsfile = File::open(&settingsfilepath).expect("Error opening log file!");
 	} else {
-		settingsfile = File::create(&settingsfilepath).expect("Error creating log file!");
+        writeln!(logfile, "{}", PlatoMessage::notify(&format!("Settingsfile not found!")).to_json());
+        panic!();
 	}
 
 	let mut settingsstr = String::new();
 	settingsfile.read_to_string(&mut settingsstr);
-	let settings: ZoteroSyncSettings = toml::from_str(&settingsstr).expect("Error reading settings filesloth with duck face sitting on a park bench!");
+	let settings: ZoteroSyncSettings = toml::from_str(&settingsstr).expect("Error reading settings file!");
 
-	let save_path = Path::new(args.get(1).unwrap());
+	let save_path = Path::new(&env::var("PWD").unwrap()).join(args.get(1).unwrap());
 	if !save_path.exists() {
 		fs::create_dir(&save_path)?;
 	}
@@ -97,8 +101,6 @@ fn main() -> Result<(), Error> {
 	let sigterm = Arc::new(AtomicBool::new(false));
 	signal_hook::flag::register(signal_hook::consts::SIGTERM, Arc::clone(&sigterm))?;
 
-	writeln!(logfile, "{}:\t{args:?}", chrono::offset::Local::now());
-	writeln!(logfile, "{}:\t{}", chrono::offset::Local::now(), env::var("PWD").unwrap());
 
 	let zapi = ZoteroInit::set_user(&settings.zotero_id, &settings.zotero_key);
 
@@ -126,7 +128,7 @@ fn main() -> Result<(), Error> {
     println!("{}", PlatoMessage::notify(&"Zotero Items tagged for Reading loaded!").to_json());
 
 	let webdav_client = Client::init(&settings.webdav_user, &settings.webdav_password);
-
+    let mut first_run = true;
 	println!("{}", PlatoMessage::serach(&save_path.to_str().unwrap(), &"", &"", false).to_json());
     //run until process is terminated by sigterm
 	'mainloop: while !sigterm.load(Ordering::Relaxed) {
@@ -146,10 +148,14 @@ fn main() -> Result<(), Error> {
 			}
 		}
 
-		for (parent_key, pdf_attachments) in &pdf_attachments_children {
-			download_pdf(items_by_key[parent_key], pdf_attachments, &webdav_client, &settings.webdav_url, &save_path);
-		}
-
+        if first_run {
+            for (parent_key, pdf_attachments) in &pdf_attachments_children {
+                download_pdf(items_by_key[parent_key], pdf_attachments, &webdav_client, &settings.webdav_url, &save_path);
+            }
+            first_run = false;
+        } else {
+            break;
+        }
 	}
 	Ok(())
 }
