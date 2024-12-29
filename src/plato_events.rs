@@ -2,7 +2,7 @@ use std::path::Path;
 
 use chrono::{DateTime, Datelike};
 use serde::{Serialize, Deserialize};
-use zotero::data_structure::{ToJson, item::Item};
+use zotero_data::{ToJson, item::Item};
 use serde_json::Value;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -56,12 +56,12 @@ impl PlatoMessage {
 			message: msg.to_string()
 		}
 	}
-	pub fn enableWifi() -> Self {
+	pub fn enable_wifi() -> Self {
 		Self::Wifi {
 			enabled: true
 		}
 	}
-	pub fn disableWifi() -> Self {
+	pub fn disable_wifi() -> Self {
 		Self::Wifi {
 			enabled: false
 		}
@@ -74,7 +74,7 @@ impl PlatoMessage {
 		}
 	}
 
-	pub fn addDocument(path: &Path, document_info: &Item) -> Self {
+	pub fn add_document(path: &Path, document_info: &Item) -> Self {
 
 		// Get the file extension
 		let extension = path.extension().unwrap().to_str().unwrap();

@@ -10,11 +10,11 @@ use std::path::Path;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
-use zotero::{ZoteroInit, Get};
-use zotero::data_structure::ToJson;
-use zotero::data_structure::collection::{Collection};
-use zotero::data_structure::item::{Item, ItemType};
-use zotero::data_structure::item::AttachmentData;
+use zotero_api::{Zotero, ZoteroApi, ZoteroApiExecutor};
+use zotero_data::ToJson;
+use zotero_data::collection::{Collection};
+use zotero_data::item::{Item, ItemType};
+use zotero_data::item::AttachmentData;
 use std::ops::Deref;
 use rustydav::client::Client;
 use rustydav::prelude::*;
@@ -53,7 +53,7 @@ fn download_pdf(parent_item: &Item, pdf_id: &Vec<AttachmentData>, client: &Clien
 
                     // Write the contents of the PDF file to the output file
                     io::copy(&mut file, &mut outfile).expect("Unable to write to output file");
-					println!("{}", PlatoMessage::addDocument(&outpath, parent_item).to_json());
+					println!("{}", PlatoMessage::add_document(&outpath, parent_item).to_json());
                 }
             }
             Err(err) => {
@@ -64,20 +64,22 @@ fn download_pdf(parent_item: &Item, pdf_id: &Vec<AttachmentData>, client: &Clien
     None
 }
 
-fn main() -> Result<(), Error> {
+#[tokio::main]
+async fn main() -> Result<(), Error> {
 	let mut args: Vec<String> = env::args().skip(1).collect();
 
     //setup application logging
 	let mut logfile: File;
 	let logpath = Path::new("/var/log/zotero.log");
+    let pwd = env::current_dir().unwrap();
 	if logpath.exists() {
 		logfile = fs::OpenOptions::new().write(true).append(true).open(&logpath).expect("Error opening log file!");
 	} else {
 		logfile = File::create(&logpath).expect("Error creating log file!");
 	}
 
-	writeln!(logfile, "{}:\t{args:?}", chrono::offset::Local::now());
-	writeln!(logfile, "{}:\t{}", chrono::offset::Local::now(), env::var("PWD").unwrap());
+	let _ = writeln!(logfile, "{}:\t{args:?}", chrono::offset::Local::now());
+	writeln!(logfile, "{}:\tPWD: {}", chrono::offset::Local::now(), env::var("PWD").unwrap());
 
 	let mut settingsfile: File;
 	let settingsfilepath = Path::new(&env::var("PWD").unwrap()).join("ZoteroSettings.toml");
@@ -102,14 +104,14 @@ fn main() -> Result<(), Error> {
 	signal_hook::flag::register(signal_hook::consts::SIGTERM, Arc::clone(&sigterm))?;
 
 
-	let zapi = ZoteroInit::set_user(&settings.zotero_id, &settings.zotero_key);
+	let zapi = Zotero::set_user(&settings.zotero_id, &settings.zotero_key);
 
-	let items_to_read = zapi.get_items("tag=plato-read").expect("Error retrieving items");
+	let items_to_read: Vec<Item> = zapi.get_items("tag=plato-read").execute(&zapi).expect("");
 	let mut items_by_key = BTreeMap::new();
 	let mut pdf_attachments_children = BTreeMap::new();
 	for i in &items_to_read {
 		if i.meta.has_children() {
-			let children: Vec<AttachmentData> = zapi.get_child_items(i.key(), None).unwrap().into_iter().filter_map(|item| {
+			let children: Vec<AttachmentData> = zapi.get_child_items(i.key(), None).execute::<Vec<Item>, _>(&zapi).unwrap().into_iter().filter_map(|item| {
 				match item.data {
 					ItemType::Attachment(atch) => {
 						if &atch.content_type == "application/pdf" {
@@ -137,6 +139,7 @@ fn main() -> Result<(), Error> {
 
 		let mut plato_resp: Option<PlatoResponse> = None;
 		if !line.is_empty() {
+            writeln!(logfile, "Log: {line}");
 			match serde_json::from_str::<PlatoResponse>(&line) {
 				Err(msg) => {
 					writeln!(logfile, "{}:\tError: {msg}", chrono::offset::Local::now());
